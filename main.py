@@ -12,7 +12,7 @@ queue = []  # cписок
 
 def add2q(amount):
     for i in range(amount):
-        queue.append(Client(n / 10, randint(100, 500)))
+        queue.append(Client(n, randint(100, 500)))
 
 
 def done():
@@ -36,7 +36,7 @@ class Client:
         prefix = ''
         if self.in_progress:
             prefix = '*'
-        return prefix + '(a:' + str(round(self.time_arrive, 2)) +\
+        return prefix + '(a:' + str(round(self.time_arrive/10, 2)) +\
                ', w:' + str(round(-n + self.time_arrive + self.max_wait_time, 2)) + ')'
 
 
@@ -74,8 +74,4 @@ pygame.quit()
 # // - целая часть от деления
 # / - деление
 
-# 0. все неименованные константы вынести в переменные
-# создать новую функцию gone
-# 1. полный аналог done, но подсчёт ушедших людей
-# 2. вызов функции gone в том случае, если человек находится в очереди больше чем 100 тиков
-# 3. записывать макс время ожидания для каждого клиента
+# 0. все не именованные константы вынести в переменные
