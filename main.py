@@ -4,28 +4,17 @@ from random import randint
 
 pygame.init()
 online = True
-pygame.display.set_mode((800, 600))
+surface = pygame.display.set_mode((800, 600))
 n = 0
-g = 0
+game_speed = 100
 min_ready_wait_time = 100  # минимальная граница выбора рандомного времени готовности ждать в очереди
 max_ready_wait_time = 500  # максимальная граница выбора рандомного времени готовности ждать в очереди
-queue = []  # cписок
 
-
-def add2q(amount):
-    for i in range(amount):
-        # queue.append(Client(n, randint(100, 500)))
-        queue.append(Client(n, randint(min_ready_wait_time, max_ready_wait_time)))
-
-
-def done():
-    queue.pop(0)
-
-
-def gone(client_index):
-    global g
-    queue.pop(client_index)
-    g += 1
+prob_come = 3  # вероятность, что человек придёт
+min_people_came_to_queue = 1  # минимальная граница выбора рандомного количества человек в очереди
+max_people_came_to_queue = 5  # максимальная граница выбора рандомного количества человек в очереди
+min_time_of_processing = 10  # минимальное время обслуживания одного клиента
+max_time_of_processing = 15  # минимальное время обслуживания одного клиента
 
 
 class Client:
@@ -43,41 +32,65 @@ class Client:
                ', w:' + str(round(-n + self.time_arrive + self.max_wait_time, 2)) + ')'
 
 
-processing = 0
-prob_not_come = 97  # вероятность, что человек не придёт
-min_people_came_to_queue = 1  # минимальная граница выбора рандомного количества человек в очереди
-max_people_came_to_queue = 5  # максимальная граница выбора рандомного количества человек в очереди
-min_time_of_processing = 10  # минимальное время обслуживания одного клиента
-max_time_of_processing = 15  # минимальное время обслуживания одного клиента
+class Queue:
+    def __init__(self, prob_come):
+        self.d = 0
+        self.g = 0
+        self.processing = 0
+        self.queue = []  # список
+        self.prob_come = prob_come
+
+    def add2q(self, amount):
+        for i in range(amount):
+            self.queue.append(Client(n, randint(min_ready_wait_time, max_ready_wait_time)))
+
+    def done(self):
+        self.queue.pop(0)
+        self.d += 1
+
+    def gone(self, client_index):
+        self.queue.pop(client_index)
+        self.g += 1
+
+    def __len__(self):
+        return len(self.queue)
+
+    def turn(self):
+        if randint(0, 100) < prob_come:
+            self.add2q(randint(min_people_came_to_queue, max_people_came_to_queue))
+        for i in range(len(self) - 1, -1, -1):
+            if self.queue[i].max_wait_time < (n - self.queue[i].time_arrive) and not self.queue[i].in_progress:
+                self.gone(i)
+        if self.processing > 0:
+            self.processing -= 1
+            if self.processing == 0:
+                self.done()
+        elif len(self) > 0:
+            self.queue[0].in_progress = True
+            self.processing = randint(min_time_of_processing, max_time_of_processing)
+
+
+queue = Queue(prob_come)
 
 while online:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             online = False
-    # if randint(0, 100) > 97:
-    if randint(0, 100) > prob_not_come:
-        # add2q(randint(1, 5))
-        add2q(randint(min_people_came_to_queue, max_people_came_to_queue))
-    for i in range(len(queue) - 1, -1, -1):
-        if queue[i].max_wait_time < (n - queue[i].time_arrive) and not queue[i].in_progress:
-            gone(i)
-    if processing > 0:
-        processing -= 1
-        if processing == 0:
-            done()
-    elif len(queue) > 0:
-        queue[0].in_progress = True
-        # processing = randint(10, 15)
-        processing = randint(min_time_of_processing, max_time_of_processing)
-    time.sleep(0.1)
+    queue.turn()
+    surface.fill((0, 0, 0))
+    pygame.draw.rect(surface, (255, 255, 0), pygame.Rect(20, 20, len(queue) * 10, 20))
+    pygame.draw.rect(surface, (0, 255, 0), pygame.Rect(20, 60, queue.d, 20))
+    pygame.draw.rect(surface, (255, 0, 0), pygame.Rect(20, 100, queue.g, 20))
+    pygame.display.flip()
+    time.sleep(1/game_speed)
     n += 1
-    if n % 10 == 0:
-        print(n // 10, end='  ')
-        print(g, end='  ')
+    if n % game_speed == 0:
+        print(n // game_speed, end='  ')
+        print(queue.g, end='  ')
         if len(queue) > 0:
             print(len(queue), end='  ')
             for i in range(len(queue)):
-                print(queue[i], end=',')
+                print(queue.queue[i], end=',')
         print('')
 pygame.quit()
 
