@@ -16,7 +16,7 @@ max_people_came_to_queue = 5  # максимальная граница выбо
 min_time_of_processing = 10  # минимальное время обслуживания одного клиента
 max_time_of_processing = 15  # минимальное время обслуживания одного клиента
 
-workers_amount = 20
+workers_amount = 1
 
 
 class Client:
@@ -97,15 +97,44 @@ class Worker:
                                           max_time_of_processing * self.speed // 100)
 
 
+class Button:
+    def __init__(self, surf, x=0, y=0, width=1, height=1, label=""):
+        self.label = label
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.color = (80, 80, 80)
+        self.hover_color = (100, 100, 100)
+        self.active_color = (60, 60, 60)
+        self.surf = surf
+        self.font_small = pygame.font.SysFont("Arial", 14)
+        self.button_text = self.font_small.render(self.label, True, (255, 255, 255))
+
+    def render(self):
+        pygame.draw.rect(self.surf, self.color, pygame.Rect(self.x, self.y, self.width, self.height))
+        self.surf.blit(self.button_text, (self.x + 10, self.y + 10))
+
+    def inside(self):
+        mouse_xy = pygame.mouse.get_pos()  # кортеж с координатами
+        if self.x <= mouse_xy[0] <= self.x + self.width and self.y <= mouse_xy[1] <= self.y + self.height:
+            return True
+        return False
+
+
 queue = Queue(prob_come)
 workers = []
 for i in range(workers_amount):
     workers.append(Worker(i, randint(70, 200)))
-
+button_add = Button(surface, 90, 90, 55, 34, "add")
 while online:
+    print(len(workers))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             online = False
+        if event.type == pygame.MOUSEBUTTONDOWN and button_add.inside():
+            workers.append(Worker(len(workers), randint(70, 200)))
+            workers_amount += 1
     queue.turn()
     surface.fill((0, 0, 0))
     shift = 0
@@ -115,8 +144,9 @@ while online:
         pygame.draw.rect(surface, (0, 255, 0), pygame.Rect(20 + shift, 60, workers[i].d, 20))
         shift += workers[i].d
         shift += 1
-    pygame.draw.rect(surface, (255, 255, 0), pygame.Rect(20, 20, len(queue) * 10, 20))
+    pygame.draw.rect(surface, (255, 255, 0), pygame.Rect(20, 20, len(queue) * 3, 20))
     pygame.draw.rect(surface, (255, 0, 0), pygame.Rect(20, 100, queue.g, 20))
+    button_add.render()
     pygame.display.flip()
     time.sleep(1 / game_speed)
     n += 1
@@ -133,3 +163,10 @@ pygame.quit()
 # % - остаток от деления
 # // - целая часть от деления
 # / - деление
+
+# сделать так, чтоыбы человек, которого обслуживают тоже мог уйти (теоретически) (счётчик терпения, когда обслуж в 10 раз медленнее),
+# но если всё равно выходит из себя, то уходит
+# например, был готво ждать 100, прождал 80, обслужили за 15
+
+
+# кнопочки управления скоростью, кнопочка паузы, кнопочки управления очередью, кнопочка удаления терминала
