@@ -10,7 +10,7 @@ game_speed = 100
 min_ready_wait_time = 100  # минимальная граница выбора рандомного времени готовности ждать в очереди
 max_ready_wait_time = 500  # максимальная граница выбора рандомного времени готовности ждать в очереди
 
-prob_come = 60  # вероятность, что человек придёт
+prob_come = 1  # вероятность, что человек придёт
 min_people_came_to_queue = 1  # минимальная граница выбора рандомного количества человек в очереди
 max_people_came_to_queue = 5  # максимальная граница выбора рандомного количества человек в очереди
 min_time_of_processing = 10  # минимальное время обслуживания одного клиента
@@ -78,11 +78,12 @@ class Queue:
 
 
 class Worker:
-    def __init__(self, index, speed=100):
+    def __init__(self, index, speed=100, button=None):
         self.processing = 0
         self.index = index
         self.d = 0
         self.speed = speed
+        self.button = button
 
     def turn(self):
         if self.processing > 0:
@@ -95,6 +96,14 @@ class Worker:
             if i is not None:
                 self.processing = randint(min_time_of_processing * self.speed // 100,
                                           max_time_of_processing * self.speed // 100)
+        self.render()
+
+    def render(self):
+        y = 140 + self.index * 40
+        pygame.draw.rect(surface, (0, 0, 255), pygame.Rect(20, y, self.d * workers_amount + 1, 20))
+        if self.button is not None:
+            self.button.y = y
+            self.button.render()
 
 
 class Button:
@@ -125,8 +134,12 @@ class Button:
 queue = Queue(prob_come)
 workers = []
 for i in range(workers_amount):
-    workers.append(Worker(i, randint(70, 200)))
+    workers.append(Worker(i, randint(70, 200), Button(surface, 0, 140 + i * 40, 20, 20, "X")))
 button_add = Button(surface, 90, 90, 55, 34, "add")
+button_plus_speed = Button(surface, 90, 134, 55, 34, "+speed")
+button_minus_speed = Button(surface, 90, 178, 55, 34, "-speed")
+button_pause = Button(surface, 90, 222, 55, 34, "pause")
+game_paused = False
 while online:
     print(len(workers))
     for event in pygame.event.get():
@@ -135,18 +148,33 @@ while online:
         if event.type == pygame.MOUSEBUTTONDOWN and button_add.inside():
             workers.append(Worker(len(workers), randint(70, 200)))
             workers_amount += 1
+        for i in range(workers_amount):
+            if workers[i].button is not None:
+                if event.type == pygame.MOUSEBUTTONDOWN and workers[i].button.inside():
+                    workers.pop(i)
+                    workers_amount -= 1
+        if event.type == pygame.MOUSEBUTTONDOWN and button_plus_speed.inside():
+            game_speed += 10
+        if event.type == pygame.MOUSEBUTTONDOWN and button_minus_speed.inside():
+            game_speed -= 10
+        if event.type == pygame.MOUSEBUTTONDOWN and button_pause.inside():
+            game_paused = not game_paused
+    if game_paused or game_speed < 1:
+        continue
     queue.turn()
     surface.fill((0, 0, 0))
     shift = 0
     for i in range(workers_amount):
         workers[i].turn()
-        pygame.draw.rect(surface, (0, 0, 255), pygame.Rect(20, 140 + i * 40, workers[i].d * workers_amount, 20))
         pygame.draw.rect(surface, (0, 255, 0), pygame.Rect(20 + shift, 60, workers[i].d, 20))
         shift += workers[i].d
         shift += 1
     pygame.draw.rect(surface, (255, 255, 0), pygame.Rect(20, 20, len(queue) * 3, 20))
     pygame.draw.rect(surface, (255, 0, 0), pygame.Rect(20, 100, queue.g, 20))
     button_add.render()
+    button_plus_speed.render()
+    button_minus_speed.render()
+    button_pause.render()
     pygame.display.flip()
     time.sleep(1 / game_speed)
     n += 1
@@ -164,9 +192,12 @@ pygame.quit()
 # // - целая часть от деления
 # / - деление
 
-# сделать так, чтоыбы человек, которого обслуживают тоже мог уйти (теоретически) (счётчик терпения, когда обслуж в 10 раз медленнее),
+# сделать так, чтобы человек, которого обслуживают тоже мог уйти (теоретически)
+# (счётчик терпения, когда обслуж в 10 раз медленнее),
 # но если всё равно выходит из себя, то уходит
 # например, был готво ждать 100, прождал 80, обслужили за 15
 
 
-# кнопочки управления скоростью, кнопочка паузы, кнопочки управления очередью, кнопочка удаления терминала
+# кнопочки управления очередью, кнопочка удаления терминала (массив)
+
+# когда процесс на паузе выводить на кнопке надпись старт, когда процесс запущен - пауза
